@@ -6,7 +6,6 @@ RUN npm install
 
 COPY tsconfig*.json ./
 COPY src ./src
-COPY vitest.setup.ts ./vitest.setup.ts
 RUN npm run build
 
 FROM node:20-alpine AS runner
