@@ -21,9 +21,9 @@ const mockSignupRow = {
   opportunity_id: mockOpportunityRow.id
 };
 
-const opportunitiesOrderMock = vi.fn();
-const signupsOrderMock = vi.fn();
-const getUserMock = vi.fn();
+const opportunitiesOrderMock = vi.hoisted(() => vi.fn());
+const signupsOrderMock = vi.hoisted(() => vi.fn());
+const getUserMock = vi.hoisted(() => vi.fn());
 
 vi.mock("../src/lib/supabase", () => ({
   supabaseAdmin: {
