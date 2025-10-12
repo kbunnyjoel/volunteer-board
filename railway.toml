@@ -1,6 +1,7 @@
 [build]
-builder = "DOCKERFILE"
-dockerfilePath = "server/Dockerfile"
+builder = "NIXPACKS"
+root = "server"
+buildCommand = "npm install && npm run build"
 
 [deploy]
-restartPolicyType = "ON_FAILURE"
+startCommand = "npm start"
