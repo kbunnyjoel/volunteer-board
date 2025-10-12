@@ -1,10 +1,5 @@
 [build]
-builder = "NIXPACKS"
-root = "server"
-buildCommand = "npm run build"
-
-[build.env]
-NIXPACKS_NODE_VERSION = "20"
+builder = "DOCKERFILE"
 
 [deploy]
-startCommand = "npm start"
+restartPolicyType = "ON_FAILURE"
