@@ -6,6 +6,17 @@ import type {
   SignupResponse
 } from "../types";
 
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined)
+  ?.replace(/\/$/, "")
+  ?? "";
+
+function buildUrl(path: string): string {
+  if (!API_BASE_URL) {
+    return path;
+  }
+  return `${API_BASE_URL}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
 async function parseError(response: Response): Promise<string> {
   try {
     const data = (await response.clone().json()) as { error?: unknown };
@@ -29,7 +40,7 @@ async function parseError(response: Response): Promise<string> {
 }
 
 export async function fetchOpportunities(): Promise<Opportunity[]> {
-  const response = await fetch("/api/opportunities");
+  const response = await fetch(buildUrl("/api/opportunities"));
   if (!response.ok) {
     const message = await parseError(response);
     throw new Error(message || "Failed to load opportunities");
@@ -43,7 +54,7 @@ export async function submitSignup(
   payload: SignupPayload
 ): Promise<SignupResponse> {
   const response = await fetch(
-    `/api/opportunities/${payload.opportunityId}/signups`,
+    buildUrl(`/api/opportunities/${payload.opportunityId}/signups`),
     {
       method: "POST",
       headers: {
@@ -65,7 +76,7 @@ export async function createOpportunity(
   token: string,
   payload: OpportunityInput
 ): Promise<Opportunity> {
-  const response = await fetch("/api/opportunities", {
+  const response = await fetch(buildUrl("/api/opportunities"), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -87,7 +98,7 @@ export async function updateOpportunity(
   id: string,
   payload: OpportunityUpdateInput
 ): Promise<Opportunity> {
-  const response = await fetch(`/api/opportunities/${id}`, {
+  const response = await fetch(buildUrl(`/api/opportunities/${id}`), {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
@@ -108,7 +119,7 @@ export async function deleteOpportunity(
   token: string,
   id: string
 ): Promise<void> {
-  const response = await fetch(`/api/opportunities/${id}`, {
+  const response = await fetch(buildUrl(`/api/opportunities/${id}`), {
     method: "DELETE",
     headers: {
       Authorization: `Bearer ${token}`
