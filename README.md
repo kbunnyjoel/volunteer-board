@@ -108,4 +108,7 @@ A GitHub Actions workflow (`.github/workflows/ci.yml`) runs on pushes and pull r
 - executes backend (`npm run test`) and frontend unit suites (`npm run test -- --run`)
 - builds Docker images for backend and frontend to ensure container builds stay healthy
 
+If you add the secrets `DOCKER_USERNAME` and `DOCKER_PASSWORD` (and optionally `DOCKER_ORG`) to the repository, the workflow logs in to Docker Hub (`docker.io`) and pushes images tagged with the current commit SHA.
+In the absence of credentials it simply builds the images locally for verification.
+
 If you add environment-specific secrets (real Supabase keys, registry credentials), configure them in the repository settings before extending the workflow to push images or deploy.
