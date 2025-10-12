@@ -35,7 +35,9 @@ vi.mock('../lib/supabaseClient', () => ({
 }));
 
 import { supabaseClient } from '../lib/supabaseClient';
-const supabaseAuth = supabaseClient?.auth ?? authMock;
+const supabaseAuth = supabaseClient?.auth
+  ? (supabaseClient.auth as unknown as typeof authMock)
+  : authMock;
 const { getSession, signInWithPassword, signOut, onAuthStateChange } = supabaseAuth;
 
 import { AdminPage } from '../pages/AdminPage';
