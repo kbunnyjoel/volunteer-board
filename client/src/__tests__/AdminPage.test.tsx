@@ -2,8 +2,23 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 
-const mockedFetchSignups = vi.fn();
-const mockedFetchOpportunities = vi.fn();
+const mockedFetchSignups = vi.hoisted(() => vi.fn());
+const mockedFetchOpportunities = vi.hoisted(() => vi.fn());
+
+const authMock = vi.hoisted(() => ({
+  getSession: vi.fn(),
+  signInWithPassword: vi.fn(),
+  signOut: vi.fn(),
+  onAuthStateChange: vi.fn((callback: (event: string, session: any) => void) => {
+    return {
+      data: {
+        subscription: {
+          unsubscribe: vi.fn()
+        }
+      }
+    };
+  })
+}));
 
 vi.mock('../api/signups', () => ({
   fetchSignups: mockedFetchSignups
@@ -13,19 +28,6 @@ vi.mock('../api/opportunities', () => ({
   fetchOpportunities: mockedFetchOpportunities
 }));
 
-const authMock = {
-  getSession: vi.fn(),
-  signInWithPassword: vi.fn(),
-  signOut: vi.fn(),
-  onAuthStateChange: vi.fn((callback: (event: string, session: any) => void) => ({
-    data: {
-      subscription: {
-        unsubscribe: vi.fn()
-      }
-    }
-  }))
-};
-
 vi.mock('../lib/supabaseClient', () => ({
   supabaseClient: {
     auth: authMock
@@ -33,8 +35,8 @@ vi.mock('../lib/supabaseClient', () => ({
 }));
 
 import { supabaseClient } from '../lib/supabaseClient';
-const mockedSupabase = supabaseClient as unknown as { auth: typeof authMock };
-const { getSession, signInWithPassword, signOut, onAuthStateChange } = mockedSupabase.auth;
+const supabaseAuth = supabaseClient?.auth ?? authMock;
+const { getSession, signInWithPassword, signOut, onAuthStateChange } = supabaseAuth;
 
 import { AdminPage } from '../pages/AdminPage';
 
@@ -75,6 +77,9 @@ describe('AdminPage', () => {
     signOut.mockReset();
     getSession.mockReset();
     onAuthStateChange.mockReset();
+    onAuthStateChange.mockImplementation(() => ({
+      data: { subscription: { unsubscribe: vi.fn() } }
+    }));
     mockedFetchSignups.mockResolvedValue([]);
     mockedFetchOpportunities.mockResolvedValue([]);
   });
@@ -82,10 +87,12 @@ describe('AdminPage', () => {
   it('shows login form when no session', async () => {
     getSession.mockResolvedValue({ data: { session: null }, error: null });
 
-    render(<AdminPage />);
+    const view = render(<AdminPage />);
 
     await screen.findByText(/sign in to view recent signups/i);
     expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
+
+    view.unmount();
   });
 
   it('loads signups when session exists', async () => {
@@ -93,12 +100,14 @@ describe('AdminPage', () => {
     mockedFetchSignups.mockResolvedValue(mockSignups);
     mockedFetchOpportunities.mockResolvedValue(mockOpportunities);
 
-    render(<AdminPage />);
+    const view = render(<AdminPage />);
 
     await waitFor(() => expect(mockedFetchSignups).toHaveBeenCalledWith('test-token'));
 
     expect(screen.getByText('Jane Doe')).toBeInTheDocument();
-    expect(screen.getByText(/community cleanup/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/community cleanup/i)[0]).toBeInTheDocument();
+
+    view.unmount();
   });
 
   it('submits credentials when logging in', async () => {
@@ -106,7 +115,7 @@ describe('AdminPage', () => {
     signInWithPassword.mockResolvedValue({ data: { session: mockSession }, error: null });
 
     const user = userEvent.setup();
-    render(<AdminPage />);
+    const view = render(<AdminPage />);
 
     await screen.findByText(/sign in to view recent signups/i);
 
@@ -120,5 +129,7 @@ describe('AdminPage', () => {
         password: 'password123'
       });
     });
+
+    view.unmount();
   });
 });

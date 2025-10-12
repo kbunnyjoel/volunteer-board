@@ -40,7 +40,7 @@ describe('VolunteerPage', () => {
 
   it('renders opportunities and submits signup', async () => {
     const user = userEvent.setup();
-    render(<VolunteerPage />);
+    const view = render(<VolunteerPage />);
 
     await screen.findByText('Community Garden Volunteer');
 
@@ -62,5 +62,7 @@ describe('VolunteerPage', () => {
       volunteerEmail: 'jane@example.com',
       notes: 'Excited to help'
     });
+
+    view.unmount();
   });
 });
