@@ -4,7 +4,7 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 
-COPY tsconfig.json*.json ./ 2>/dev/null || true
+COPY tsconfig*.json ./
 COPY src ./src
 COPY vitest.setup.ts ./vitest.setup.ts
 RUN npm run build
