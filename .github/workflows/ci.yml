@@ -1,0 +1,97 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches:
+      - main
+      - feature/**
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    env:
+      NODE_ENV: test
+      SUPABASE_URL: http://127.0.0.1:54321
+      SUPABASE_SERVICE_ROLE_KEY: test-service-role
+      SUPABASE_ANON_KEY: test-anon
+      ADMIN_SECRET: test-admin
+      ADMIN_EMAILS: admin@example.com
+      DOCKER_REGISTRY: docker.io
+      IMAGE_TAG: ${{ github.sha }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: |
+            server/package-lock.json
+            client/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: server
+        run: npm install
+
+      - name: Run backend tests
+        working-directory: server
+        run: npm run test
+
+      - name: Install frontend dependencies
+        working-directory: client
+        run: npm install
+
+      - name: Run frontend unit tests
+        working-directory: client
+        run: npm run test -- --run
+
+      - name: Determine Docker organization and credentials
+        run: |
+          USER="${{ secrets.DOCKER_USERNAME }}"
+          if [ -z "$USER" ]; then
+            USER="${{ vars.DOCKER_USERNAME }}"
+          fi
+
+          ORG="${{ secrets.DOCKER_ORG }}"
+          if [ -z "$ORG" ]; then
+            ORG="${{ vars.DOCKER_ORG }}"
+          fi
+          if [ -z "$ORG" ]; then
+            ORG="$USER"
+          fi
+          if [ -z "$ORG" ]; then
+            ORG="${{ github.repository_owner }}"
+          fi
+
+          echo "DOCKER_USER=$USER" >> "$GITHUB_ENV"
+          echo "DOCKER_ORG=$ORG" >> "$GITHUB_ENV"
+
+          if [ -n "$USER" ] && [ -n "${{ secrets.DOCKER_PASSWORD }}" ]; then
+            echo "NEEDS_DOCKER_LOGIN=true" >> "$GITHUB_ENV"
+          else
+            echo "NEEDS_DOCKER_LOGIN=false" >> "$GITHUB_ENV"
+          fi
+
+      - name: Log in to Docker registry
+        if: ${{ env.NEEDS_DOCKER_LOGIN == 'true' }}
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login ${{ env.DOCKER_REGISTRY }} -u "${{ env.DOCKER_USER }}" --password-stdin
+
+      - name: Build backend image
+        run: docker build -t ${{ env.DOCKER_REGISTRY }}/${{ env.DOCKER_ORG }}/volunteer-board-backend:${{ env.IMAGE_TAG }} ./server
+
+      - name: Build frontend image
+        run: docker build -t ${{ env.DOCKER_REGISTRY }}/${{ env.DOCKER_ORG }}/volunteer-board-frontend:${{ env.IMAGE_TAG }} ./client
+
+      - name: Push backend image
+        if: ${{ env.NEEDS_DOCKER_LOGIN == 'true' }}
+        run: docker push ${{ env.DOCKER_REGISTRY }}/${{ env.DOCKER_ORG }}/volunteer-board-backend:${{ env.IMAGE_TAG }}
+
+      - name: Push frontend image
+        if: ${{ env.NEEDS_DOCKER_LOGIN == 'true' }}
+        run: docker push ${{ env.DOCKER_REGISTRY }}/${{ env.DOCKER_ORG }}/volunteer-board-frontend:${{ env.IMAGE_TAG }}
