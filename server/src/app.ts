@@ -14,13 +14,22 @@ const originPatterns =
 type OriginRule =
   | { type: "wildcard" }
   | { type: "exact"; value: string }
-  | { type: "suffix"; value: string };
+  | { type: "suffix"; value: string }
+  | { type: "protocolSuffix"; protocol: string; suffix: string };
 
 const parsedOriginRules: OriginRule[] = originPatterns
   .filter(Boolean)
   .map((pattern) => {
     if (pattern === "*") {
       return { type: "wildcard" } as OriginRule;
+    }
+    const wildcardWithProtocol = pattern.match(/^(https?:\/\/)\*\.(.+)$/i);
+    if (wildcardWithProtocol) {
+      return {
+        type: "protocolSuffix",
+        protocol: wildcardWithProtocol[1],
+        suffix: `.${wildcardWithProtocol[2]}`
+      } as OriginRule;
     }
     if (pattern.startsWith("*")) {
       return { type: "suffix", value: pattern.slice(1) } as OriginRule;
@@ -32,7 +41,11 @@ const isOriginAllowed = (origin: string): boolean => {
   return parsedOriginRules.some((rule) => {
     if (rule.type === "wildcard") return true;
     if (rule.type === "exact") return rule.value === origin;
-    // suffix rule: pattern like *.vercel.app allows any origin ending with .vercel.app
+    if (rule.type === "protocolSuffix") {
+      if (!origin.startsWith(rule.protocol)) return false;
+      return origin.endsWith(rule.suffix);
+    }
+    // suffix rule: patterns like *.vercel.app allow any origin ending with .vercel.app
     return origin.endsWith(rule.value);
   });
 };
