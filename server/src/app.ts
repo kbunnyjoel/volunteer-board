@@ -20,10 +20,15 @@ type OriginRule =
 const parsedOriginRules: OriginRule[] = originPatterns
   .filter(Boolean)
   .map((pattern) => {
-    if (pattern === "*") {
+    const normalizedPattern = pattern.endsWith("/")
+      ? pattern.slice(0, -1)
+      : pattern;
+
+    if (normalizedPattern === "*") {
       return { type: "wildcard" } as OriginRule;
     }
-    const wildcardWithProtocol = pattern.match(/^(https?:\/\/)\*\.(.+)$/i);
+    const wildcardWithProtocol =
+      normalizedPattern.match(/^(https?:\/\/)\*\.(.+)$/i);
     if (wildcardWithProtocol) {
       return {
         type: "protocolSuffix",
@@ -31,11 +36,13 @@ const parsedOriginRules: OriginRule[] = originPatterns
         suffix: `.${wildcardWithProtocol[2]}`
       } as OriginRule;
     }
-    if (pattern.startsWith("*")) {
-      return { type: "suffix", value: pattern.slice(1) } as OriginRule;
+    if (normalizedPattern.startsWith("*")) {
+      return { type: "suffix", value: normalizedPattern.slice(1) } as OriginRule;
     }
-    return { type: "exact", value: pattern } as OriginRule;
+    return { type: "exact", value: normalizedPattern } as OriginRule;
   });
+
+console.log("Configured CORS origins:", originPatterns);
 
 const isOriginAllowed = (origin: string): boolean => {
   return parsedOriginRules.some((rule) => {
