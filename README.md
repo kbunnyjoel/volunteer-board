@@ -72,6 +72,14 @@ psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -f db/sql/seed-op
   npm run test:coverage
   ```
   Covers volunteer signup flow and admin authentication with mocked Supabase + API calls.
+- End-to-end smoke tests (Playwright):
+  ```bash
+  cd e2e
+  npm install
+  E2E_BASE_URL=https://volunteer-board.vercel.app npm test
+  ```
+  Point `E2E_BASE_URL` at any deployed frontend (local dev server, Vercel preview, or production). The suite checks that the volunteer landing page and the admin dashboard shell both load.  
+  You can also trigger the **Preview Smoke Tests** GitHub Action manually and supply the preview URL to run the same checks in CI.
 - Frontend manual QA: volunteer signup flow and `/admin` dashboard (sign in with a Supabase admin user).
 
 ## Kickoff Tasks
