@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { supabaseAdmin } from "../lib/supabase";
+import { logger } from "../lib/logger";
 import type {
   Opportunity,
   CreateOpportunityPayload,
@@ -81,7 +82,7 @@ router.get("/", async (_req, res) => {
     .order("date", { ascending: true });
 
   if (error) {
-    console.error("Supabase list error", error);
+    logger.error("Supabase list error", { error });
     return res.status(500).json({ error: "Failed to fetch opportunities" });
   }
 
@@ -113,7 +114,7 @@ router.post("/", async (req, res) => {
     .single();
 
   if (error) {
-    console.error("Supabase insert error", error);
+    logger.error("Supabase insert error", { error });
     return res.status(500).json({ error: "Failed to create opportunity" });
   }
 
@@ -158,7 +159,7 @@ router.patch("/:id", async (req, res) => {
   }
 
   if (error) {
-    console.error("Supabase update error", error);
+    logger.error("Supabase update error", { error });
     return res.status(500).json({ error: "Failed to update opportunity" });
   }
 
@@ -178,7 +179,7 @@ router.delete("/:id", async (req, res) => {
   }
 
   if (error) {
-    console.error("Supabase delete error", error);
+    logger.error("Supabase delete error", { error });
     return res.status(500).json({ error: "Failed to delete opportunity" });
   }
 
@@ -211,7 +212,7 @@ router.post("/:id/signups", async (req, res) => {
     if (fetchError.code === "PGRST116") {
       return res.status(404).json({ error: "Opportunity not found" });
     }
-    console.error("Supabase fetch for signup error", fetchError);
+    logger.error("Supabase fetch for signup error", { error: fetchError });
     return res.status(500).json({ error: "Failed to load opportunity" });
   }
 
@@ -231,7 +232,7 @@ router.post("/:id/signups", async (req, res) => {
   });
 
   if (signupError) {
-    console.error("Supabase signup insert error", signupError);
+    logger.error("Supabase signup insert error", { error: signupError });
     return res.status(500).json({ error: "Failed to record signup" });
   }
 
@@ -243,7 +244,7 @@ router.post("/:id/signups", async (req, res) => {
     .eq("id", req.params.id);
 
   if (decrementError) {
-    console.error("Supabase decrement error", decrementError);
+    logger.error("Supabase decrement error", { error: decrementError });
     return res
       .status(500)
       .json({ error: "Signup recorded but failed to decrement spots" });
@@ -265,7 +266,7 @@ router.get("/:id/signups", async (req, res) => {
     .order("created_at", { ascending: false });
 
   if (error) {
-    console.error("Supabase signup list error", error);
+    logger.error("Supabase signup list error", { error });
     return res.status(500).json({ error: "Failed to fetch signups" });
   }
 

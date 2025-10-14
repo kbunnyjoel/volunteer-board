@@ -3,6 +3,8 @@ import express from "express";
 import cors from "cors";
 import { opportunitiesRouter } from "./routes/opportunities";
 import { signupsRouter } from "./routes/signups";
+import { isLogLevel, logger, type LogLevel } from "./lib/logger";
+import { requestLogger } from "./middleware/requestLogger";
 
 const app = express();
 
@@ -42,7 +44,7 @@ const parsedOriginRules: OriginRule[] = originPatterns
     return { type: "exact", value: normalizedPattern } as OriginRule;
   });
 
-console.log("Configured CORS origins:", originPatterns);
+logger.info("Configured CORS origins", { origins: originPatterns });
 
 const isOriginAllowed = (origin: string): boolean => {
   const normalizedOrigin = origin.endsWith("/")
@@ -61,18 +63,51 @@ const isOriginAllowed = (origin: string): boolean => {
   });
 };
 
+app.use(requestLogger);
+
 app.use(
   cors({
     origin(origin, callback) {
       if (!origin || isOriginAllowed(origin)) {
         return callback(null, true);
       }
-      console.warn(`Blocked CORS origin: ${origin}`);
+      logger.warn("Blocked CORS origin", { origin });
       return callback(new Error("Not allowed by CORS"));
     }
   })
 );
 app.use(express.json());
+app.use(requestLogger);
+
+const logIngestToken = process.env.LOG_INGEST_TOKEN?.trim();
+
+app.post("/api/logs", (req, res) => {
+  const token = req.header("x-log-token")?.trim();
+  if (logIngestToken && token !== logIngestToken) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const { level, message, context } = req.body ?? {};
+
+  if (!message || typeof message !== "string") {
+    return res.status(400).json({ error: "Missing log message" });
+  }
+
+  const normalizedLevel =
+    typeof level === "string" && isLogLevel(level) ? level : "info";
+
+  const levelToUse = normalizedLevel as LogLevel;
+
+  logger[levelToUse]("Client log", {
+    message,
+    ...((context && typeof context === "object" && !Array.isArray(context)
+      ? context
+      : {}) as Record<string, unknown>),
+    source: "client"
+  });
+
+  return res.status(202).json({ accepted: true });
+});
 
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok" });

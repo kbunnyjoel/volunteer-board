@@ -79,7 +79,7 @@ psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -f db/sql/seed-op
   E2E_BASE_URL=https://volunteer-board.vercel.app npm test
   ```
   Point `E2E_BASE_URL` at any deployed frontend (local dev server, Vercel preview, or production). The suite checks that the volunteer landing page and the admin dashboard shell both load.  
-  You can also trigger the **Preview Smoke Tests** GitHub Action manually and supply the preview URL to run the same checks in CI.
+  You can also trigger the **Preview Smoke Tests** GitHub Action manually and supply the preview URL to run the same checks in CI. When logging env vars are configured, these runs will produce traceable entries in Logflare.
 - Frontend manual QA: volunteer signup flow and `/admin` dashboard (sign in with a Supabase admin user).
 
 ## Kickoff Tasks
@@ -95,6 +95,11 @@ psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -f db/sql/seed-op
 - Supabase free tier for quick database hosting (delete instance after demo).
 - Vercel/Railway for lightweight deployments if time permits; otherwise run locally.
 - Use environment variables via `.env` (copy from `.env.example`) for secrets.
+- Structured logging: the API emits JSON logs to stdout and, when
+  `LOGFLARE_SOURCE_ID`/`LOGFLARE_API_KEY` are set, forwards entries to Logflare.
+  The frontend forwards uncaught errors through `/api/logs`; secure the ingest
+  endpoint by setting a shared `LOG_INGEST_TOKEN` (and mirror it as
+  `VITE_LOG_INGEST_TOKEN` in the client).
 
 ## Container Deployments
 
