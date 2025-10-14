@@ -49,6 +49,21 @@ export async function fetchSignups(
     throw new Error(message || "Failed to load signups");
   }
 
-  const payload = (await response.json()) as PaginatedResponse<SignupRecord>;
+  const payload = (await response.json()) as
+    | PaginatedResponse<SignupRecord>
+    | SignupRecord[];
+
+  if (Array.isArray(payload)) {
+    return {
+      items: payload,
+      page: 1,
+      perPage: payload.length,
+      totalItems: payload.length,
+      totalPages: 1,
+      hasMore: false,
+      nextPage: null
+    };
+  }
+
   return payload;
 }

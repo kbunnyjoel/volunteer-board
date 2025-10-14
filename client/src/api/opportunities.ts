@@ -40,7 +40,22 @@ export async function fetchOpportunities(
     throw new Error(message || "Failed to load opportunities");
   }
 
-  const payload = (await response.json()) as PaginatedResponse<Opportunity>;
+  const payload = (await response.json()) as
+    | PaginatedResponse<Opportunity>
+    | Opportunity[];
+
+  if (Array.isArray(payload)) {
+    return {
+      items: payload,
+      page: 1,
+      perPage: payload.length,
+      totalItems: payload.length,
+      totalPages: 1,
+      hasMore: false,
+      nextPage: null
+    };
+  }
+
   return payload;
 }
 
