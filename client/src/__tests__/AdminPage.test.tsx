@@ -82,8 +82,24 @@ describe('AdminPage', () => {
     onAuthStateChange.mockImplementation(() => ({
       data: { subscription: { unsubscribe: vi.fn() } }
     }));
-    mockedFetchSignups.mockResolvedValue([]);
-    mockedFetchOpportunities.mockResolvedValue([]);
+    mockedFetchSignups.mockResolvedValue({
+      items: [],
+      page: 1,
+      perPage: 25,
+      totalItems: 0,
+      totalPages: 0,
+      hasMore: false,
+      nextPage: null
+    });
+    mockedFetchOpportunities.mockResolvedValue({
+      items: [],
+      page: 1,
+      perPage: 25,
+      totalItems: 0,
+      totalPages: 0,
+      hasMore: false,
+      nextPage: null
+    });
   });
 
   it('shows login form when no session', async () => {
@@ -99,12 +115,33 @@ describe('AdminPage', () => {
 
   it('loads signups when session exists', async () => {
     getSession.mockResolvedValue({ data: { session: mockSession }, error: null });
-    mockedFetchSignups.mockResolvedValue(mockSignups);
-    mockedFetchOpportunities.mockResolvedValue(mockOpportunities);
+    mockedFetchSignups.mockResolvedValue({
+      items: mockSignups,
+      page: 1,
+      perPage: 25,
+      totalItems: mockSignups.length,
+      totalPages: 1,
+      hasMore: false,
+      nextPage: null
+    });
+    mockedFetchOpportunities.mockResolvedValue({
+      items: mockOpportunities,
+      page: 1,
+      perPage: 25,
+      totalItems: mockOpportunities.length,
+      totalPages: 1,
+      hasMore: false,
+      nextPage: null
+    });
 
     const view = render(<AdminPage />);
 
-    await waitFor(() => expect(mockedFetchSignups).toHaveBeenCalledWith('test-token'));
+    await waitFor(() =>
+      expect(mockedFetchSignups).toHaveBeenCalledWith('test-token', {
+        page: 1,
+        perPage: 25
+      })
+    );
 
     expect(screen.getByText('Jane Doe')).toBeInTheDocument();
     expect(screen.getAllByText(/community cleanup/i)[0]).toBeInTheDocument();

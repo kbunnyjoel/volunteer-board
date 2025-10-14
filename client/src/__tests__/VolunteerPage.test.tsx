@@ -27,7 +27,15 @@ const mockOpportunities = [
 
 describe('VolunteerPage', () => {
   beforeEach(() => {
-    mockedFetchOpportunities.mockResolvedValue(mockOpportunities);
+    mockedFetchOpportunities.mockResolvedValue({
+      items: mockOpportunities,
+      page: 1,
+      perPage: 12,
+      totalItems: mockOpportunities.length,
+      totalPages: 1,
+      hasMore: false,
+      nextPage: null
+    });
     mockedSubmitSignup.mockResolvedValue({
       success: true,
       message: 'Thanks!'
@@ -43,6 +51,10 @@ describe('VolunteerPage', () => {
     const view = render(<VolunteerPage />);
 
     await screen.findByText('Community Garden Volunteer');
+    expect(mockedFetchOpportunities).toHaveBeenCalledWith({
+      page: 1,
+      perPage: 12
+    });
 
     await user.click(screen.getByRole('button', { name: /view & apply/i }));
 

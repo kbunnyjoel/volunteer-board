@@ -1,14 +1,42 @@
-import type { SignupRecord } from "../types";
+import type { PaginatedResponse, SignupRecord } from "../types";
 import { buildUrl, parseError } from "./client";
 
-export async function fetchSignups(token?: string): Promise<SignupRecord[]> {
+type FetchSignupsOptions = {
+  page?: number;
+  perPage?: number;
+  opportunityId?: string;
+  signal?: AbortSignal;
+};
+
+const buildQueryString = (params: Record<string, string | number | undefined>) => {
+  const search = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined) {
+      search.set(key, String(value));
+    }
+  });
+  const query = search.toString();
+  return query ? `?${query}` : "";
+};
+
+export async function fetchSignups(
+  token: string | undefined,
+  options: FetchSignupsOptions = {}
+): Promise<PaginatedResponse<SignupRecord>> {
   const headers: Record<string, string> = {};
   if (token) {
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const response = await fetch(buildUrl("/api/signups"), {
-    headers: Object.keys(headers).length ? headers : undefined
+  const query = buildQueryString({
+    page: options.page,
+    perPage: options.perPage,
+    opportunityId: options.opportunityId
+  });
+
+  const response = await fetch(buildUrl(`/api/signups${query}`), {
+    headers: Object.keys(headers).length ? headers : undefined,
+    signal: options.signal
   });
 
   if (!response.ok) {
@@ -21,6 +49,6 @@ export async function fetchSignups(token?: string): Promise<SignupRecord[]> {
     throw new Error(message || "Failed to load signups");
   }
 
-  const payload = (await response.json()) as SignupRecord[];
+  const payload = (await response.json()) as PaginatedResponse<SignupRecord>;
   return payload;
 }

@@ -39,8 +39,42 @@ export function AdminPage() {
   const [signupSearch, setSignupSearch] = useState("");
   const [signupOpportunityFilter, setSignupOpportunityFilter] = useState("all");
   const [opportunitySearch, setOpportunitySearch] = useState("");
+  const [signupsMeta, setSignupsMeta] = useState<{
+    page: number;
+    perPage: number;
+    totalItems: number;
+    totalPages: number;
+    hasMore: boolean;
+    nextPage: number | null;
+  }>({
+    page: 0,
+    perPage: 25,
+    totalItems: 0,
+    totalPages: 0,
+    hasMore: false,
+    nextPage: null
+  });
+  const [opportunitiesMeta, setOpportunitiesMeta] = useState<{
+    page: number;
+    perPage: number;
+    totalItems: number;
+    totalPages: number;
+    hasMore: boolean;
+    nextPage: number | null;
+  }>({
+    page: 0,
+    perPage: 25,
+    totalItems: 0,
+    totalPages: 0,
+    hasMore: false,
+    nextPage: null
+  });
+  const [loadingMoreSignups, setLoadingMoreSignups] = useState(false);
+  const [loadingMoreOpportunities, setLoadingMoreOpportunities] = useState(false);
 
   const supabase = supabaseClient;
+  const SIGNUPS_PAGE_SIZE = 25;
+  const OPPORTUNITIES_PAGE_SIZE = 25;
 
   const opportunityLookup = useMemo(() => {
     return new Map(opportunities.map((opp) => [opp.id, opp]));
@@ -179,13 +213,15 @@ export function AdminPage() {
     setError(null);
     try {
       const token = activeSession.access_token;
-      const [signupsData, opportunitiesData] = await Promise.all([
-        fetchSignups(token),
-        fetchOpportunities()
+      const [signupsResult, opportunitiesResult] = await Promise.all([
+        fetchSignups(token, { page: 1, perPage: SIGNUPS_PAGE_SIZE }),
+        fetchOpportunities({ page: 1, perPage: OPPORTUNITIES_PAGE_SIZE })
       ]);
 
-      setSignups(signupsData);
-      setOpportunities(opportunitiesData);
+      setSignups(signupsResult.items);
+      setSignupsMeta(signupsResult);
+      setOpportunities(opportunitiesResult.items);
+      setOpportunitiesMeta(opportunitiesResult);
       setAuthError(null);
     } catch (err) {
       console.error(err);
@@ -196,6 +232,24 @@ export function AdminPage() {
         const message =
           err instanceof Error ? err.message : "Unable to load admin data.";
         setError(message);
+        setSignups([]);
+        setOpportunities([]);
+        setSignupsMeta((prev) => ({
+          ...prev,
+          page: 0,
+          totalItems: 0,
+          totalPages: 0,
+          hasMore: false,
+          nextPage: null
+        }));
+        setOpportunitiesMeta((prev) => ({
+          ...prev,
+          page: 0,
+          totalItems: 0,
+          totalPages: 0,
+          hasMore: false,
+          nextPage: null
+        }));
       }
     } finally {
       setLoading(false);
@@ -241,6 +295,23 @@ export function AdminPage() {
           void loadData(newSession);
         } else {
           setSignups([]);
+          setSignupsMeta((prev) => ({
+            ...prev,
+            page: 0,
+            totalItems: 0,
+            totalPages: 0,
+            hasMore: false,
+            nextPage: null
+          }));
+          setOpportunities([]);
+          setOpportunitiesMeta((prev) => ({
+            ...prev,
+            page: 0,
+            totalItems: 0,
+            totalPages: 0,
+            hasMore: false,
+            nextPage: null
+          }));
           setAuthError("Sign in to view recent signups.");
           setLoading(false);
         }
@@ -266,6 +337,57 @@ export function AdminPage() {
     }
     setRefreshing(true);
     void loadData(session);
+  };
+
+  const handleLoadMoreSignups = async () => {
+    if (!session || loadingMoreSignups || !signupsMeta.hasMore) {
+      return;
+    }
+
+    setLoadingMoreSignups(true);
+    try {
+      const nextPage = signupsMeta.nextPage ?? signupsMeta.page + 1;
+      const result = await fetchSignups(session.access_token, {
+        page: nextPage,
+        perPage: SIGNUPS_PAGE_SIZE
+      });
+      setSignups((prev) => [...prev, ...result.items]);
+      setSignupsMeta(result);
+    } catch (err) {
+      console.error(err);
+      const message =
+        err instanceof Error ? err.message : "Unable to load more signups.";
+      setError(message);
+    } finally {
+      setLoadingMoreSignups(false);
+    }
+  };
+
+  const handleLoadMoreOpportunities = async () => {
+    if (loadingMoreOpportunities || !opportunitiesMeta.hasMore) {
+      return;
+    }
+
+    setLoadingMoreOpportunities(true);
+    try {
+      const nextPage =
+        opportunitiesMeta.nextPage ?? opportunitiesMeta.page + 1;
+      const result = await fetchOpportunities({
+        page: nextPage,
+        perPage: OPPORTUNITIES_PAGE_SIZE
+      });
+      setOpportunities((prev) => [...prev, ...result.items]);
+      setOpportunitiesMeta(result);
+    } catch (err) {
+      console.error(err);
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Unable to load more opportunities.";
+      setError(message);
+    } finally {
+      setLoadingMoreOpportunities(false);
+    }
   };
 
   const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -605,6 +727,19 @@ export function AdminPage() {
         </div>
       )}
 
+      {signupsMeta.hasMore && (
+        <div className="admin-footer-actions">
+          <button
+            type="button"
+            className="secondary-btn"
+            onClick={handleLoadMoreSignups}
+            disabled={loadingMoreSignups}
+          >
+            {loadingMoreSignups ? "Loading more…" : "Load more signups"}
+          </button>
+        </div>
+      )}
+
       <section className="admin-subpanel">
         <div className="admin-header">
           <div>
@@ -696,6 +831,20 @@ export function AdminPage() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            )}
+            {opportunitiesMeta.hasMore && !opportunityFilteredEmpty && (
+              <div className="admin-footer-actions">
+                <button
+                  type="button"
+                  className="secondary-btn"
+                  onClick={handleLoadMoreOpportunities}
+                  disabled={loadingMoreOpportunities}
+                >
+                  {loadingMoreOpportunities
+                    ? "Loading more…"
+                    : "Load more opportunities"}
+                </button>
               </div>
             )}
           </>
