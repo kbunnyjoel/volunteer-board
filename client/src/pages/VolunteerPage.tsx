@@ -148,6 +148,12 @@ export function VolunteerPage() {
     setSubmitting(false);
   };
 
+  const handleLoadMoreOpportunities = useCallback(() => {
+    if (!opportunityMeta.hasMore || loadingMore) return;
+    const nextPage = opportunityMeta.nextPage ?? opportunityMeta.page + 1;
+    void loadOpportunities(nextPage, true);
+  }, [opportunityMeta, loadingMore, loadOpportunities]);
+
   return (
     <>
       <header className="app-header">
@@ -293,8 +299,3 @@ export function VolunteerPage() {
     </>
   );
 }
-  const handleLoadMoreOpportunities = () => {
-    if (!opportunityMeta.hasMore || loadingMore) return;
-    const nextPage = opportunityMeta.nextPage ?? opportunityMeta.page + 1;
-    void loadOpportunities(nextPage, true);
-  };
