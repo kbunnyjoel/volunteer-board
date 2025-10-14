@@ -46,6 +46,7 @@ If the backend is stopped the frontend will surface an error card, so keep `npm 
 
 - `/admin` → sign in with a Supabase email/password defined in `ADMIN_EMAILS` to view recent signups and manage opportunities (create, edit, archive). A legacy `ADMIN_SECRET` header is still supported as a fallback.
 - Use the **Refresh** button to pull the latest data without reloading the entire app; **Log out** clears the stored token.
+- Filter signups by keyword or opportunity, export the current view as CSV, and search within the opportunities table directly from the admin dashboard.
 
 Seed local Supabase with sample data:
 ```bash
