@@ -257,11 +257,16 @@ label {
 }
 
 input,
+select,
 textarea {
   padding: 0.6rem 0.75rem;
   border: 1px solid #cbd5f5;
   border-radius: 8px;
   font-size: 0.95rem;
+}
+
+select {
+  background-color: #ffffff;
 }
 
 .success-banner {
@@ -382,4 +387,22 @@ textarea {
 
 .admin-drawer {
   max-width: 600px;
+}
+
+.admin-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.admin-filter-field {
+  min-width: 220px;
+}
+
+.admin-filter-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
 }

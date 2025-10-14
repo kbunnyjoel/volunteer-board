@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { fetchSignups } from "../api/signups";
 import {
@@ -36,12 +36,135 @@ export function AdminPage() {
     tags: "",
     spotsRemaining: "1"
   });
+  const [signupSearch, setSignupSearch] = useState("");
+  const [signupOpportunityFilter, setSignupOpportunityFilter] = useState("all");
+  const [opportunitySearch, setOpportunitySearch] = useState("");
 
   const supabase = supabaseClient;
 
   const opportunityLookup = useMemo(() => {
     return new Map(opportunities.map((opp) => [opp.id, opp]));
   }, [opportunities]);
+
+  const opportunityFilterOptions = useMemo(() => {
+    const options = opportunities.map((opportunity) => ({
+      value: opportunity.id,
+      label: opportunity.title
+    }));
+    return [
+      { value: "all", label: "All opportunities" },
+      { value: "unmatched", label: "Unmatched signups" },
+      ...options
+    ];
+  }, [opportunities]);
+
+  const filteredSignups = useMemo(() => {
+    const query = signupSearch.trim().toLowerCase();
+    return signups.filter((signup) => {
+      if (
+        signupOpportunityFilter === "unmatched" &&
+        signup.opportunityId
+      ) {
+        return false;
+      }
+      if (
+        signupOpportunityFilter !== "all" &&
+        signupOpportunityFilter !== "unmatched" &&
+        signup.opportunityId !== signupOpportunityFilter
+      ) {
+        return false;
+      }
+
+      if (!query) return true;
+      const opportunity = signup.opportunityId
+        ? opportunityLookup.get(signup.opportunityId)
+        : undefined;
+      const haystack = [
+        signup.volunteerName,
+        signup.volunteerEmail,
+        signup.notes ?? "",
+        opportunity?.title ?? "",
+        opportunity?.organization ?? "",
+        opportunity?.location ?? ""
+      ]
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(query);
+    });
+  }, [signups, signupSearch, signupOpportunityFilter, opportunityLookup]);
+
+  const filteredOpportunities = useMemo(() => {
+    const query = opportunitySearch.trim().toLowerCase();
+    if (!query) return opportunities;
+    return opportunities.filter((opportunity) => {
+      const haystack = [
+        opportunity.title,
+        opportunity.organization,
+        opportunity.location,
+        opportunity.tags.join(" ")
+      ]
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(query);
+    });
+  }, [opportunities, opportunitySearch]);
+
+  const handleResetSignupFilters = () => {
+    setSignupSearch("");
+    setSignupOpportunityFilter("all");
+  };
+
+  const handleExportSignups = () => {
+    if (filteredSignups.length === 0) return;
+    const rows = filteredSignups.map((signup) => {
+      const opportunity = signup.opportunityId
+        ? opportunityLookup.get(signup.opportunityId)
+        : undefined;
+      return [
+        signup.volunteerName,
+        signup.volunteerEmail,
+        opportunity?.title ?? "Opportunity removed",
+        opportunity?.organization ?? "",
+        opportunity?.location ?? "",
+        new Date(signup.createdAt).toISOString(),
+        signup.notes ?? ""
+      ];
+    });
+
+    const csvRows = [
+      [
+        "Volunteer Name",
+        "Volunteer Email",
+        "Opportunity",
+        "Organization",
+        "Location",
+        "Signed Up At",
+        "Notes"
+      ],
+      ...rows
+    ]
+      .map((row) =>
+        row
+          .map((value) => {
+            const cell = String(value ?? "").replace(/"/g, '""');
+            return `"${cell}"`;
+          })
+          .join(",")
+      )
+      .join("\n");
+
+    const blob = new Blob([csvRows], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `volunteer-signups-${new Date()
+      .toISOString()
+      .slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   async function loadData(activeSession: Session) {
     if (!supabase) {
@@ -208,10 +331,10 @@ export function AdminPage() {
     setOpportunityModalOpen(true);
   };
 
-  const closeOpportunityModal = () => {
+  const closeOpportunityModal = useCallback(() => {
     setOpportunityModalOpen(false);
     setOpportunitySubmitting(false);
-  };
+  }, []);
 
   const handleOpportunityInputChange = (
     event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -279,6 +402,29 @@ export function AdminPage() {
     }
   };
 
+  const showSignupsFilters =
+    session !== null && !loading && !error && signups.length > 0;
+  const signupsFilteredEmpty =
+    signups.length > 0 && filteredSignups.length === 0;
+  const opportunityFilteredEmpty =
+    opportunities.length > 0 && filteredOpportunities.length === 0;
+  const canExportSignups =
+    session !== null && !loading && !error && filteredSignups.length > 0;
+
+  useEffect(() => {
+    if (!opportunityModalOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeOpportunityModal();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [closeOpportunityModal, opportunityModalOpen]);
+
   return (
     <section className="admin-panel">
       <div className="admin-header">
@@ -295,6 +441,14 @@ export function AdminPage() {
           <button
             type="button"
             className="secondary-btn"
+            onClick={handleExportSignups}
+            disabled={!canExportSignups}
+          >
+            Export CSV
+          </button>
+          <button
+            type="button"
+            className="secondary-btn"
             onClick={handleRefresh}
             disabled={refreshing || !session}
           >
@@ -302,6 +456,44 @@ export function AdminPage() {
           </button>
         </div>
       </div>
+
+      {showSignupsFilters && (
+        <div className="admin-filter-bar">
+          <label className="admin-filter-field">
+            <span>Search signups</span>
+            <input
+              type="search"
+              value={signupSearch}
+              onChange={(event) => setSignupSearch(event.target.value)}
+              placeholder="Search by name, email, notes…"
+            />
+          </label>
+          <label className="admin-filter-field">
+            <span>Opportunity</span>
+            <select
+              value={signupOpportunityFilter}
+              onChange={(event) => setSignupOpportunityFilter(event.target.value)}
+            >
+              {opportunityFilterOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          {(signupSearch || signupOpportunityFilter !== "all") && (
+            <div className="admin-filter-actions">
+              <button
+                type="button"
+                className="text-btn"
+                onClick={handleResetSignupFilters}
+              >
+                Clear filters
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {!session ? (
         <form className="admin-login-form" onSubmit={handleLogin}>
@@ -352,6 +544,8 @@ export function AdminPage() {
         </p>
       ) : signups.length === 0 ? (
         <p>No signups recorded yet.</p>
+      ) : signupsFilteredEmpty ? (
+        <p>No signups match your filters.</p>
       ) : (
         <div className="admin-table-wrapper">
           <table className="admin-table">
@@ -365,7 +559,7 @@ export function AdminPage() {
               </tr>
             </thead>
             <tbody>
-              {signups.map((signup) => {
+              {filteredSignups.map((signup) => {
                 const opportunity = signup.opportunityId
                   ? opportunityLookup.get(signup.opportunityId)
                   : undefined;
@@ -430,53 +624,81 @@ export function AdminPage() {
         {opportunities.length === 0 ? (
           <p>No opportunities available. Create one to get started.</p>
         ) : (
-          <div className="admin-table-wrapper">
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <th>Title</th>
-                  <th>Organization</th>
-                  <th>Date</th>
-                  <th>Spots</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {opportunities.map((opportunity) => (
-                  <tr key={opportunity.id}>
-                    <td>{opportunity.title}</td>
-                    <td>{opportunity.organization}</td>
-                    <td>
-                      {new Date(opportunity.date).toLocaleDateString(undefined, {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric"
-                      })}
-                    </td>
-                    <td>{opportunity.spotsRemaining}</td>
-                    <td className="admin-table-actions">
-                      <button
-                        type="button"
-                        className="secondary-btn"
-                        onClick={() => openOpportunityModal(opportunity)}
-                        disabled={!session}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        className="danger-btn"
-                        onClick={() => handleArchiveOpportunity(opportunity)}
-                        disabled={!session}
-                      >
-                        Archive
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <>
+            <div className="admin-filter-bar">
+              <label className="admin-filter-field">
+                <span>Search opportunities</span>
+                <input
+                  type="search"
+                  value={opportunitySearch}
+                  onChange={(event) => setOpportunitySearch(event.target.value)}
+                  placeholder="Search by title, organization, location…"
+                />
+              </label>
+              {opportunitySearch && (
+                <div className="admin-filter-actions">
+                  <button
+                    type="button"
+                    className="text-btn"
+                    onClick={() => setOpportunitySearch("")}
+                  >
+                    Clear search
+                  </button>
+                </div>
+              )}
+            </div>
+            {opportunityFilteredEmpty ? (
+              <p>No opportunities match your search.</p>
+            ) : (
+              <div className="admin-table-wrapper">
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Title</th>
+                      <th>Organization</th>
+                      <th>Date</th>
+                      <th>Spots</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredOpportunities.map((opportunity) => (
+                      <tr key={opportunity.id}>
+                        <td>{opportunity.title}</td>
+                        <td>{opportunity.organization}</td>
+                        <td>
+                          {new Date(opportunity.date).toLocaleDateString(undefined, {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric"
+                          })}
+                        </td>
+                        <td>{opportunity.spotsRemaining}</td>
+                        <td className="admin-table-actions">
+                          <button
+                            type="button"
+                            className="secondary-btn"
+                            onClick={() => openOpportunityModal(opportunity)}
+                            disabled={!session}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            className="danger-btn"
+                            onClick={() => handleArchiveOpportunity(opportunity)}
+                            disabled={!session}
+                          >
+                            Archive
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
         )}
       </section>
 
