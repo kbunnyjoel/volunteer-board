@@ -45,15 +45,19 @@ const parsedOriginRules: OriginRule[] = originPatterns
 console.log("Configured CORS origins:", originPatterns);
 
 const isOriginAllowed = (origin: string): boolean => {
+  const normalizedOrigin = origin.endsWith("/")
+    ? origin.slice(0, -1)
+    : origin;
+
   return parsedOriginRules.some((rule) => {
     if (rule.type === "wildcard") return true;
-    if (rule.type === "exact") return rule.value === origin;
+    if (rule.type === "exact") return rule.value === normalizedOrigin;
     if (rule.type === "protocolSuffix") {
-      if (!origin.startsWith(rule.protocol)) return false;
-      return origin.endsWith(rule.suffix);
+      if (!normalizedOrigin.startsWith(rule.protocol)) return false;
+      return normalizedOrigin.endsWith(rule.suffix);
     }
     // suffix rule: patterns like *.vercel.app allow any origin ending with .vercel.app
-    return origin.endsWith(rule.value);
+    return normalizedOrigin.endsWith(rule.value);
   });
 };
 
