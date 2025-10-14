@@ -2,5 +2,11 @@
   "framework": "vite",
   "buildCommand": "npm install --prefix client && npm run build --prefix client",
   "outputDirectory": "client/dist",
-  "devCommand": "npm run dev --prefix client"
+  "devCommand": "npm run dev --prefix client",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
 }

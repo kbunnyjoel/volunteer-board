@@ -35,7 +35,7 @@ Quick one-day build plan for a lightweight volunteer opportunity board.
 
 6. Enable admin authentication (Supabase Auth):
    - Copy `client/.env.example` to `client/.env` and set `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, and (for production) `VITE_API_BASE_URL` pointing at your backend’s public URL.
-   - Ensure the backend `.env` includes `CLIENT_ORIGIN` with a comma-separated list of allowed frontend origins (e.g. `http://localhost:5173,https://your-frontend-domain`).
+   - Ensure the backend `.env` includes `CLIENT_ORIGIN` with a comma-separated list of allowed frontend origins (supports wildcards such as `*.vercel.app`). Example: `http://localhost:5173,https://volunteer-board.vercel.app,*.vercel.app`.
    - Create an admin user in Supabase and confirm the email, e.g.
      ```bash
      supabase auth admin create-user --email admin@example.com --password "YourSecurePass123" --email-confirm true

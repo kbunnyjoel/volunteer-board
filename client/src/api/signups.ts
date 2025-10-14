@@ -1,4 +1,5 @@
 import type { SignupRecord } from "../types";
+import { buildUrl, parseError } from "./client";
 
 export async function fetchSignups(token?: string): Promise<SignupRecord[]> {
   const headers: Record<string, string> = {};
@@ -6,7 +7,7 @@ export async function fetchSignups(token?: string): Promise<SignupRecord[]> {
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const response = await fetch("/api/signups", {
+  const response = await fetch(buildUrl("/api/signups"), {
     headers: Object.keys(headers).length ? headers : undefined
   });
 
@@ -16,7 +17,8 @@ export async function fetchSignups(token?: string): Promise<SignupRecord[]> {
       (error as Error & { code?: string }).code = "UNAUTHORIZED";
       throw error;
     }
-    throw new Error("Failed to load signups");
+    const message = await parseError(response);
+    throw new Error(message || "Failed to load signups");
   }
 
   const payload = (await response.json()) as SignupRecord[];
