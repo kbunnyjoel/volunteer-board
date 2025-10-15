@@ -1,6 +1,22 @@
 import { BrowserRouter, Link, NavLink, Navigate, Route, Routes } from "react-router-dom";
+import * as Sentry from "@sentry/react";
 import { VolunteerPage } from "./pages/VolunteerPage";
 import { AdminPage } from "./pages/AdminPage";
+
+function ErrorButton() {
+  return (
+    <button
+      className="secondary-btn"
+      type="button"
+      onClick={() => {
+        Sentry.captureMessage("Triggering test error button click", "info");
+        throw new Error("This is your first error!");
+      }}
+    >
+      Break the world
+    </button>
+  );
+}
 
 export default function App() {
   return (
@@ -32,6 +48,12 @@ export default function App() {
         </nav>
 
         <main>
+          {import.meta.env.DEV && (
+            <div className="app-test-banner">
+              <span>Observability test</span>
+              <ErrorButton />
+            </div>
+          )}
           <Routes>
             <Route path="/" element={<VolunteerPage />} />
             <Route path="/admin" element={<AdminPage />} />
