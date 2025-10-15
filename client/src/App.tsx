@@ -48,7 +48,8 @@ export default function App() {
         </nav>
 
         <main>
-          {import.meta.env.DEV && (
+          {(import.meta.env.DEV ||
+            (import.meta.env.VITE_SENTRY_TEST_BUTTON as string | undefined) === "true") && (
             <div className="app-test-banner">
               <span>Observability test</span>
               <ErrorButton />
