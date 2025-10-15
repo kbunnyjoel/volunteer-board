@@ -7,6 +7,7 @@ import { isLogLevel, logger, type LogLevel } from "./lib/logger";
 import { requestLogger } from "./middleware/requestLogger";
 
 const app = express();
+app.set("etag", false);
 
 const originPatterns =
   process.env.CLIENT_ORIGIN?.split(",").map((origin) => origin.trim()) ?? [
