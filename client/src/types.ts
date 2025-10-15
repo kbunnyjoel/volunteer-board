@@ -41,3 +41,13 @@ export type SignupRecord = {
   createdAt: string;
   opportunityId: string | null;
 };
+
+export type PaginatedResponse<T> = {
+  items: T[];
+  page: number;
+  perPage: number;
+  totalItems: number;
+  totalPages: number;
+  hasMore: boolean;
+  nextPage: number | null;
+};

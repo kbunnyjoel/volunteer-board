@@ -73,13 +73,43 @@ const mapSignupRow = (row: SignupRow): SignupPayload & {
   notes: row.notes ?? undefined
 });
 
-router.get("/", async (_req, res) => {
-  const { data, error } = await supabaseAdmin
+const MAX_PAGE_SIZE = 50;
+const DEFAULT_PAGE_SIZE = 12;
+
+const parsePositiveInt = (
+  value: unknown,
+  fallback: number,
+  max: number
+): number => {
+  const raw =
+    typeof value === "string"
+      ? value
+      : Array.isArray(value) && value.length > 0
+      ? value[0]
+      : null;
+  if (!raw) return fallback;
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed < 1) return fallback;
+  return Math.min(parsed, max);
+};
+
+router.get("/", async (req, res) => {
+  const perPage = parsePositiveInt(
+    req.query.perPage,
+    DEFAULT_PAGE_SIZE,
+    MAX_PAGE_SIZE
+  );
+  const page = parsePositiveInt(req.query.page, 1, Number.MAX_SAFE_INTEGER);
+  const offset = (page - 1) * perPage;
+
+  const { data, error, count } = await supabaseAdmin
     .from("opportunities")
     .select(
-      "id, title, organization, location, description, date, tags, spots_remaining"
+      "id, title, organization, location, description, date, tags, spots_remaining",
+      { count: "exact" }
     )
-    .order("date", { ascending: true });
+    .order("date", { ascending: true })
+    .range(offset, offset + perPage - 1);
 
   if (error) {
     logger.error("Supabase list error", { error });
@@ -87,7 +117,20 @@ router.get("/", async (_req, res) => {
   }
 
   const normalized = (data ?? []).map(mapOpportunityRow);
-  res.json(normalized);
+  const totalItems = count ?? normalized.length;
+  const totalPages =
+    perPage > 0 ? Math.max(Math.ceil(totalItems / perPage), 1) : 1;
+  const hasMore = page < totalPages;
+
+  res.json({
+    items: normalized,
+    page,
+    perPage,
+    totalItems,
+    totalPages,
+    hasMore,
+    nextPage: hasMore ? page + 1 : null
+  });
 });
 
 router.post("/", async (req, res) => {
@@ -202,52 +245,29 @@ router.post("/:id/signups", async (req, res) => {
     });
   }
 
-  const { data: opportunity, error: fetchError } = await supabaseAdmin
-    .from("opportunities")
-    .select("id, spots_remaining")
-    .eq("id", req.params.id)
-    .single();
-
-  if (fetchError) {
-    if (fetchError.code === "PGRST116") {
-      return res.status(404).json({ error: "Opportunity not found" });
-    }
-    logger.error("Supabase fetch for signup error", { error: fetchError });
-    return res.status(500).json({ error: "Failed to load opportunity" });
-  }
-
-  if (!opportunity) {
-    return res.status(404).json({ error: "Opportunity not found" });
-  }
-
-  if (opportunity.spots_remaining <= 0) {
-    return res.status(409).json({ error: "No spots remaining" });
-  }
-
-  const { error: signupError } = await supabaseAdmin.from("signups").insert({
-    opportunity_id: req.params.id,
-    volunteer_name: parseResult.data.volunteerName,
-    volunteer_email: parseResult.data.volunteerEmail,
-    notes: parseResult.data.notes ?? null
+  const { error: recordError } = await supabaseAdmin.rpc("record_signup", {
+    p_opportunity_id: req.params.id,
+    p_volunteer_name: parseResult.data.volunteerName,
+    p_volunteer_email: parseResult.data.volunteerEmail,
+    p_notes: parseResult.data.notes ?? null
   });
 
-  if (signupError) {
-    logger.error("Supabase signup insert error", { error: signupError });
-    return res.status(500).json({ error: "Failed to record signup" });
-  }
+  if (recordError) {
+    const message = typeof recordError.message === "string"
+      ? recordError.message
+      : "";
 
-  const { error: decrementError } = await supabaseAdmin
-    .from("opportunities")
-    .update({
-      spots_remaining: opportunity.spots_remaining - 1
-    })
-    .eq("id", req.params.id);
+    if (message.includes("OPPORTUNITY_NOT_FOUND")) {
+      return res.status(404).json({ error: "Opportunity not found" });
+    }
+    if (message.includes("NO_SPOTS_AVAILABLE")) {
+      return res.status(409).json({ error: "No spots remaining" });
+    }
 
-  if (decrementError) {
-    logger.error("Supabase decrement error", { error: decrementError });
+    logger.error("Supabase record signup error", { error: recordError });
     return res
       .status(500)
-      .json({ error: "Signup recorded but failed to decrement spots" });
+      .json({ error: "Failed to record signup. Try again later." });
   }
 
   res.status(201).json({

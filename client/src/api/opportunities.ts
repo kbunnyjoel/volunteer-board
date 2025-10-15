@@ -3,18 +3,59 @@ import type {
   OpportunityInput,
   OpportunityUpdateInput,
   SignupPayload,
-  SignupResponse
+  SignupResponse,
+  PaginatedResponse
 } from "../types";
 import { buildUrl, parseError } from "./client";
 
-export async function fetchOpportunities(): Promise<Opportunity[]> {
-  const response = await fetch(buildUrl("/api/opportunities"));
+type FetchOpportunitiesOptions = {
+  page?: number;
+  perPage?: number;
+  signal?: AbortSignal;
+};
+
+const buildQueryString = (params: Record<string, string | number | undefined>) => {
+  const search = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined) {
+      search.set(key, String(value));
+    }
+  });
+  const query = search.toString();
+  return query ? `?${query}` : "";
+};
+
+export async function fetchOpportunities(
+  options: FetchOpportunitiesOptions = {}
+): Promise<PaginatedResponse<Opportunity>> {
+  const query = buildQueryString({
+    page: options.page,
+    perPage: options.perPage
+  });
+  const response = await fetch(buildUrl(`/api/opportunities${query}`), {
+    signal: options.signal
+  });
   if (!response.ok) {
     const message = await parseError(response);
     throw new Error(message || "Failed to load opportunities");
   }
 
-  const payload = (await response.json()) as Opportunity[];
+  const payload = (await response.json()) as
+    | PaginatedResponse<Opportunity>
+    | Opportunity[];
+
+  if (Array.isArray(payload)) {
+    return {
+      items: payload,
+      page: 1,
+      perPage: payload.length,
+      totalItems: payload.length,
+      totalPages: 1,
+      hasMore: false,
+      nextPage: null
+    };
+  }
+
   return payload;
 }
 

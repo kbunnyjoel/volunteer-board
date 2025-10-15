@@ -21,9 +21,10 @@ const mockSignupRow = {
   opportunity_id: mockOpportunityRow.id
 };
 
-const opportunitiesOrderMock = vi.hoisted(() => vi.fn());
-const signupsOrderMock = vi.hoisted(() => vi.fn());
+const opportunitiesRangeMock = vi.hoisted(() => vi.fn());
+const signupsRangeMock = vi.hoisted(() => vi.fn());
 const getUserMock = vi.hoisted(() => vi.fn());
+const rpcMock = vi.hoisted(() => vi.fn());
 
 vi.mock("../src/lib/supabase", () => ({
   supabaseAdmin: {
@@ -31,7 +32,9 @@ vi.mock("../src/lib/supabase", () => ({
       if (table === "opportunities") {
         return {
           select: vi.fn(() => ({
-            order: opportunitiesOrderMock
+            order: vi.fn(() => ({
+              range: opportunitiesRangeMock
+            }))
           }))
         };
       }
@@ -39,7 +42,9 @@ vi.mock("../src/lib/supabase", () => ({
       if (table === "signups") {
         return {
           select: vi.fn(() => ({
-            order: signupsOrderMock
+            order: vi.fn(() => ({
+              range: signupsRangeMock
+            }))
           }))
         };
       }
@@ -48,7 +53,8 @@ vi.mock("../src/lib/supabase", () => ({
     }),
     auth: {
       getUser: getUserMock
-    }
+    },
+    rpc: rpcMock
   }
 }));
 
@@ -58,18 +64,21 @@ describe("Volunteer Board API", () => {
 beforeEach(() => {
   process.env.ADMIN_EMAILS = "admin@example.com";
 
-  opportunitiesOrderMock.mockReset();
-  signupsOrderMock.mockReset();
+  opportunitiesRangeMock.mockReset();
+  signupsRangeMock.mockReset();
   getUserMock.mockReset();
+  rpcMock.mockReset();
 
-  opportunitiesOrderMock.mockResolvedValue({
+  opportunitiesRangeMock.mockResolvedValue({
     data: [mockOpportunityRow],
-    error: null
+    error: null,
+    count: 1
   });
 
-  signupsOrderMock.mockResolvedValue({
+  signupsRangeMock.mockResolvedValue({
     data: [mockSignupRow],
-    error: null
+    error: null,
+    count: 1
   });
 
   getUserMock.mockResolvedValue({
@@ -95,18 +104,25 @@ afterEach(() => {
   it("lists opportunities", async () => {
     const response = await request(app).get("/api/opportunities");
     expect(response.status).toBe(200);
-    expect(response.body).toEqual([
-      {
-        id: mockOpportunityRow.id,
-        title: mockOpportunityRow.title,
-        organization: mockOpportunityRow.organization,
-        location: mockOpportunityRow.location,
-        description: mockOpportunityRow.description,
-        date: mockOpportunityRow.date,
-        tags: mockOpportunityRow.tags,
-        spotsRemaining: mockOpportunityRow.spots_remaining
-      }
-    ]);
+    expect(response.body).toMatchObject({
+      items: [
+        {
+          id: mockOpportunityRow.id,
+          title: mockOpportunityRow.title,
+          organization: mockOpportunityRow.organization,
+          location: mockOpportunityRow.location,
+          description: mockOpportunityRow.description,
+          date: mockOpportunityRow.date,
+          tags: mockOpportunityRow.tags,
+          spotsRemaining: mockOpportunityRow.spots_remaining
+        }
+      ],
+      page: 1,
+      totalItems: 1,
+      totalPages: 1,
+      hasMore: false,
+      nextPage: null
+    });
   });
 
   it("returns unauthorized for signups when token missing", async () => {
@@ -121,16 +137,23 @@ afterEach(() => {
       .set("authorization", `Bearer test-token`);
 
     expect(response.status).toBe(200);
-    expect(response.body).toEqual([
-      {
-        id: mockSignupRow.id,
-        volunteerName: mockSignupRow.volunteer_name,
-        volunteerEmail: mockSignupRow.volunteer_email,
-        notes: mockSignupRow.notes,
-        createdAt: mockSignupRow.created_at,
-        opportunityId: mockSignupRow.opportunity_id
-      }
-    ]);
+    expect(response.body).toMatchObject({
+      items: [
+        {
+          id: mockSignupRow.id,
+          volunteerName: mockSignupRow.volunteer_name,
+          volunteerEmail: mockSignupRow.volunteer_email,
+          notes: mockSignupRow.notes,
+          createdAt: mockSignupRow.created_at,
+          opportunityId: mockSignupRow.opportunity_id
+        }
+      ],
+      page: 1,
+      totalItems: 1,
+      totalPages: 1,
+      hasMore: false,
+      nextPage: null
+    });
   });
 
   it("rejects signups when token email is not allowed", async () => {

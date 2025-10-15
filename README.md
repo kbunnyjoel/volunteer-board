@@ -46,12 +46,14 @@ If the backend is stopped the frontend will surface an error card, so keep `npm 
 
 - `/admin` → sign in with a Supabase email/password defined in `ADMIN_EMAILS` to view recent signups and manage opportunities (create, edit, archive). A legacy `ADMIN_SECRET` header is still supported as a fallback.
 - Use the **Refresh** button to pull the latest data without reloading the entire app; **Log out** clears the stored token.
-- Filter signups by keyword or opportunity, export the current view as CSV, and search within the opportunities table directly from the admin dashboard.
+- Filter signups by keyword or opportunity, export the current view as CSV, paginate through larger datasets, and search within the opportunities table directly from the admin dashboard.
 
 Seed local Supabase with sample data:
 ```bash
 psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -f db/schema.sql
 psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -f db/sql/seed-opportunities.sql
+psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -f db/sql/seed-signups.sql
+psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -f db/sql/record_signup.sql
 ```
 
 ## Testing
@@ -101,6 +103,12 @@ psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -f db/sql/seed-op
   The frontend forwards uncaught errors through `/api/logs`; secure the ingest
   endpoint by setting a shared `LOG_INGEST_TOKEN` (and mirror it as
   `VITE_LOG_INGEST_TOKEN` in the client).
+- API pagination: `/api/opportunities` and `/api/signups` accept `page` and
+  `perPage` query parameters (defaults of 12 and 10). Responses include
+  `totalItems`, `totalPages`, `hasMore`, and `nextPage` to drive the admin UI.
+- The `record_signup` stored procedure (see `db/sql/record_signup.sql`) records
+  a signup and decrements `spots_remaining` in a single transaction to avoid
+  over-booking under load.
 
 ## Container Deployments
 

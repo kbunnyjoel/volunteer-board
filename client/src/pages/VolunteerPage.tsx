@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { fetchOpportunities, submitSignup } from "../api/opportunities";
 import type { Opportunity, SignupPayload } from "../types";
 
@@ -12,6 +12,7 @@ const initialModalState: ModalState = { status: "closed" };
 export function VolunteerPage() {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [modalState, setModalState] = useState<ModalState>(initialModalState);
   const [formError, setFormError] = useState<string | null>(null);
@@ -22,27 +23,67 @@ export function VolunteerPage() {
     notes: ""
   });
 
-  async function loadOpportunities() {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await fetchOpportunities();
-      setOpportunities(data);
-    } catch (err) {
-      console.error(err);
-      const message =
-        err instanceof Error
-          ? err.message
-          : "Unable to load opportunities right now.";
-      setError(message);
-    } finally {
-      setLoading(false);
-    }
-  }
+  const [opportunityMeta, setOpportunityMeta] = useState<{
+    page: number;
+    perPage: number;
+    hasMore: boolean;
+    nextPage: number | null;
+  }>({
+    page: 0,
+    perPage: 12,
+    hasMore: false,
+    nextPage: null
+  });
+
+  const OPPORTUNITY_PAGE_SIZE = 12;
+
+  const loadOpportunities = useCallback(
+    async (page = 1, append = false) => {
+      if (page === 1 && !append) {
+        setLoading(true);
+        setError(null);
+      } else {
+        setLoadingMore(true);
+      }
+
+      try {
+        const result = await fetchOpportunities({
+          page,
+          perPage: OPPORTUNITY_PAGE_SIZE
+        });
+        setOpportunities((prev) =>
+          append ? [...prev, ...result.items] : result.items
+        );
+        setOpportunityMeta({
+          page: result.page,
+          perPage: result.perPage,
+          hasMore: result.hasMore,
+          nextPage: result.nextPage
+        });
+      } catch (err) {
+        console.error(err);
+        const message =
+          err instanceof Error
+            ? err.message
+            : "Unable to load opportunities right now.";
+        setError(message);
+        if (!append) {
+          setOpportunities([]);
+        }
+      } finally {
+        if (page === 1 && !append) {
+          setLoading(false);
+        } else {
+          setLoadingMore(false);
+        }
+      }
+    },
+    []
+  );
 
   useEffect(() => {
-    loadOpportunities();
-  }, []);
+    void loadOpportunities();
+  }, [loadOpportunities]);
 
   const openOpportunity = (opportunity: Opportunity) => {
     setModalState({ status: "viewing", opportunity });
@@ -92,7 +133,7 @@ export function VolunteerPage() {
         opportunity: modalState.opportunity,
         message: response.message
       });
-      await loadOpportunities();
+      await loadOpportunities(1, false);
       setTimeout(() => {
         closeModal();
       }, 1500);
@@ -106,6 +147,12 @@ export function VolunteerPage() {
     }
     setSubmitting(false);
   };
+
+  const handleLoadMoreOpportunities = useCallback(() => {
+    if (!opportunityMeta.hasMore || loadingMore) return;
+    const nextPage = opportunityMeta.nextPage ?? opportunityMeta.page + 1;
+    void loadOpportunities(nextPage, true);
+  }, [opportunityMeta, loadingMore, loadOpportunities]);
 
   return (
     <>
@@ -159,6 +206,19 @@ export function VolunteerPage() {
             </article>
           ))}
         </section>
+      )}
+
+      {!loading && !error && opportunityMeta.hasMore && (
+        <div className="load-more-row">
+          <button
+            className="secondary-btn"
+            type="button"
+            onClick={handleLoadMoreOpportunities}
+            disabled={loadingMore}
+          >
+            {loadingMore ? "Loading more…" : "Load more opportunities"}
+          </button>
+        </div>
       )}
 
       {modalState.status !== "closed" && (
