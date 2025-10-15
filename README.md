@@ -112,7 +112,9 @@ psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -f db/sql/record_
 - Sentry (optional): set `SENTRY_DSN` (server) and `VITE_SENTRY_DSN` (client) to
   enable error reporting. Samples/default tracing is off by default; adjust
   `SENTRY_TRACES_SAMPLE_RATE`/`VITE_SENTRY_TRACES_SAMPLE_RATE` to capture
-  transactions when you need deeper diagnostics.
+  transactions when you need deeper diagnostics. Set
+  `VITE_SENTRY_TEST_BUTTON=true` temporarily to surface the dev-only error
+  button in deployed environments when you need to confirm reporting.
 
 ## Container Deployments
 
