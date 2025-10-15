@@ -10,9 +10,7 @@ import { requestLogger } from "./middleware/requestLogger";
 const app = express();
 app.set("etag", false);
 
-if (sentry.enabled) {
-  app.use(sentry.requestHandler);
-}
+app.use(sentry.requestHandler);
 
 const originPatterns =
   process.env.CLIENT_ORIGIN?.split(",").map((origin) => origin.trim()) ?? [
@@ -69,7 +67,6 @@ const isOriginAllowed = (origin: string): boolean => {
   });
 };
 
-app.use(requestLogger);
 
 app.use(
   cors({
@@ -128,8 +125,6 @@ app.get("/api/health", (_req, res) => {
 app.use("/api/opportunities", opportunitiesRouter);
 app.use("/api/signups", signupsRouter);
 
-if (sentry.enabled) {
-  app.use(sentry.errorHandler);
-}
+app.use(sentry.errorHandler);
 
 export { app };

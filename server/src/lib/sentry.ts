@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/node";
+import type { ErrorRequestHandler, RequestHandler } from "express";
 
 const SENTRY_DSN = process.env.SENTRY_DSN;
 const SENTRY_ENVIRONMENT = process.env.SENTRY_ENVIRONMENT ?? process.env.NODE_ENV ?? "development";
@@ -14,18 +15,18 @@ if (sentryEnabled) {
   });
 }
 
-const noopRequestHandler: Parameters<typeof Sentry.Handlers.requestHandler>[0] = (_req, _res, next) =>
-  next();
+const requestHandler: RequestHandler = sentryEnabled
+  ? Sentry.Handlers.requestHandler({ user: false })
+  : (_req, _res, next) => next();
 
-const noopErrorHandler: Parameters<typeof Sentry.Handlers.errorHandler>[0] = (err, _req, _res, next) =>
-  next(err);
+const errorHandler: ErrorRequestHandler = sentryEnabled
+  ? Sentry.Handlers.errorHandler()
+  : (err, _req, _res, next) => next(err);
 
 export const sentry = {
   enabled: sentryEnabled,
-  requestHandler: sentryEnabled
-    ? Sentry.Handlers.requestHandler({ user: false })
-    : noopRequestHandler,
-  errorHandler: sentryEnabled ? Sentry.Handlers.errorHandler() : noopErrorHandler,
+  requestHandler,
+  errorHandler,
   captureException(error: unknown) {
     if (!sentryEnabled) return;
     Sentry.captureException(error);
