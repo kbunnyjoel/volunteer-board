@@ -109,6 +109,10 @@ psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -f db/sql/record_
 - The `record_signup` stored procedure (see `db/sql/record_signup.sql`) records
   a signup and decrements `spots_remaining` in a single transaction to avoid
   over-booking under load.
+- Sentry (optional): set `SENTRY_DSN` (server) and `VITE_SENTRY_DSN` (client) to
+  enable error reporting. Samples/default tracing is off by default; adjust
+  `SENTRY_TRACES_SAMPLE_RATE`/`VITE_SENTRY_TRACES_SAMPLE_RATE` to capture
+  transactions when you need deeper diagnostics.
 
 ## Container Deployments
 

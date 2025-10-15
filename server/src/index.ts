@@ -1,5 +1,6 @@
 import { app } from "./app";
 import { logger } from "./lib/logger";
+import { sentry } from "./lib/sentry";
 
 const PORT = Number(process.env.PORT ?? 4000);
 
@@ -8,6 +9,9 @@ app.listen(PORT, () => {
     port: PORT,
     url: `http://localhost:${PORT}`
   });
+  if (sentry.enabled) {
+    logger.info("Sentry instrumentation enabled");
+  }
 });
 
 process.on("uncaughtException", (error) => {

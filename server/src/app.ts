@@ -4,10 +4,13 @@ import cors from "cors";
 import { opportunitiesRouter } from "./routes/opportunities";
 import { signupsRouter } from "./routes/signups";
 import { isLogLevel, logger, type LogLevel } from "./lib/logger";
+import { sentry } from "./lib/sentry";
 import { requestLogger } from "./middleware/requestLogger";
 
 const app = express();
 app.set("etag", false);
+
+app.use(sentry.requestHandler);
 
 const originPatterns =
   process.env.CLIENT_ORIGIN?.split(",").map((origin) => origin.trim()) ?? [
@@ -64,7 +67,6 @@ const isOriginAllowed = (origin: string): boolean => {
   });
 };
 
-app.use(requestLogger);
 
 app.use(
   cors({
@@ -122,5 +124,7 @@ app.get("/api/health", (_req, res) => {
 
 app.use("/api/opportunities", opportunitiesRouter);
 app.use("/api/signups", signupsRouter);
+
+app.use(sentry.errorHandler);
 
 export { app };
