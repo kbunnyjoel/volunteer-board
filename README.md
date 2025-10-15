@@ -52,6 +52,7 @@ Seed local Supabase with sample data:
 ```bash
 psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -f db/schema.sql
 psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -f db/sql/seed-opportunities.sql
+psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -f db/sql/seed-signups.sql
 psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -f db/sql/record_signup.sql
 ```
 
@@ -103,7 +104,7 @@ psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -f db/sql/record_
   endpoint by setting a shared `LOG_INGEST_TOKEN` (and mirror it as
   `VITE_LOG_INGEST_TOKEN` in the client).
 - API pagination: `/api/opportunities` and `/api/signups` accept `page` and
-  `perPage` query parameters (defaults of 12 and 25). Responses include
+  `perPage` query parameters (defaults of 12 and 10). Responses include
   `totalItems`, `totalPages`, `hasMore`, and `nextPage` to drive the admin UI.
 - The `record_signup` stored procedure (see `db/sql/record_signup.sql`) records
   a signup and decrements `spots_remaining` in a single transaction to avoid

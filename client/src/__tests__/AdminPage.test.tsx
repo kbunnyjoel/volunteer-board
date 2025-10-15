@@ -85,7 +85,7 @@ describe('AdminPage', () => {
     mockedFetchSignups.mockResolvedValue({
       items: [],
       page: 1,
-      perPage: 25,
+      perPage: 10,
       totalItems: 0,
       totalPages: 0,
       hasMore: false,
@@ -94,7 +94,7 @@ describe('AdminPage', () => {
     mockedFetchOpportunities.mockResolvedValue({
       items: [],
       page: 1,
-      perPage: 25,
+      perPage: 10,
       totalItems: 0,
       totalPages: 0,
       hasMore: false,
@@ -118,7 +118,7 @@ describe('AdminPage', () => {
     mockedFetchSignups.mockResolvedValue({
       items: mockSignups,
       page: 1,
-      perPage: 25,
+      perPage: 10,
       totalItems: mockSignups.length,
       totalPages: 1,
       hasMore: false,
@@ -127,7 +127,7 @@ describe('AdminPage', () => {
     mockedFetchOpportunities.mockResolvedValue({
       items: mockOpportunities,
       page: 1,
-      perPage: 25,
+      perPage: 10,
       totalItems: mockOpportunities.length,
       totalPages: 1,
       hasMore: false,
@@ -139,7 +139,7 @@ describe('AdminPage', () => {
     await waitFor(() =>
       expect(mockedFetchSignups).toHaveBeenCalledWith('test-token', {
         page: 1,
-        perPage: 25
+        perPage: 10
       })
     );
 

@@ -48,7 +48,7 @@ export function AdminPage() {
     nextPage: number | null;
   }>({
     page: 0,
-    perPage: 25,
+    perPage: 10,
     totalItems: 0,
     totalPages: 0,
     hasMore: false,
@@ -63,7 +63,7 @@ export function AdminPage() {
     nextPage: number | null;
   }>({
     page: 0,
-    perPage: 25,
+    perPage: 10,
     totalItems: 0,
     totalPages: 0,
     hasMore: false,
@@ -73,8 +73,8 @@ export function AdminPage() {
   const [loadingMoreOpportunities, setLoadingMoreOpportunities] = useState(false);
 
   const supabase = supabaseClient;
-  const SIGNUPS_PAGE_SIZE = 25;
-  const OPPORTUNITIES_PAGE_SIZE = 25;
+  const SIGNUPS_PAGE_SIZE = 10;
+  const OPPORTUNITIES_PAGE_SIZE = 10;
 
   const opportunityLookup = useMemo(() => {
     return new Map(opportunities.map((opp) => [opp.id, opp]));
