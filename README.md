@@ -103,6 +103,9 @@ psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -f db/sql/record_
   The frontend forwards uncaught errors through `/api/logs`; secure the ingest
   endpoint by setting a shared `LOG_INGEST_TOKEN` (and mirror it as
   `VITE_LOG_INGEST_TOKEN` in the client).
+- Rate limiting: configure `RATE_LIMIT_WINDOW_MS` and `RATE_LIMIT_MAX` to cap
+  how many unauthenticated API calls each IP can make per window. Defaults are
+  60 requests per 60 seconds.
 - API pagination: `/api/opportunities` and `/api/signups` accept `page` and
   `perPage` query parameters (defaults of 12 and 10). Responses include
   `totalItems`, `totalPages`, `hasMore`, and `nextPage` to drive the admin UI.

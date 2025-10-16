@@ -6,6 +6,7 @@ import { signupsRouter } from "./routes/signups";
 import { isLogLevel, logger, type LogLevel } from "./lib/logger";
 import { sentry } from "./lib/sentry";
 import { requestLogger } from "./middleware/requestLogger";
+import { apiRateLimiter } from "./middleware/rateLimiter";
 
 const app = express();
 app.set("etag", false);
@@ -87,6 +88,7 @@ app.use((_req, res, next) => {
   next();
 });
 app.use(requestLogger);
+app.use("/api", apiRateLimiter);
 
 const logIngestToken = process.env.LOG_INGEST_TOKEN?.trim();
 
