@@ -119,6 +119,13 @@ psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -f db/sql/record_
   `VITE_SENTRY_TEST_BUTTON=true` temporarily to surface the dev-only error
   button in deployed environments when you need to confirm reporting.
 
+## Decommissioning & Costs
+
+- Vercel preview/production deployments of this app sit well inside the free tier, but it is best practice to delete the project (Project → Settings → Danger Zone) once you are done to avoid keeping environment secrets around.
+- Railway services consume the monthly usage credit as long as they run. When you no longer need the API, stop or delete the service so billing halts immediately.
+- Supabase projects continue to count against your free quota; removing the project (or pausing it) prevents unexpected usage and keeps the API credentials from lingering.
+- Before tearing anything down, you can run the Playwright smoke tests against the active deployment to capture a final “good” run for the archives (see **Testing** above).
+
 ## Container Deployments
 
 Build and run everything with Docker Compose (expects `.env` to contain Supabase and admin values):
