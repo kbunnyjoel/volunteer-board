@@ -81,7 +81,7 @@ psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -f db/sql/record_
   npm install
   E2E_BASE_URL=https://volunteer-board.vercel.app npm test
   ```
-  Point `E2E_BASE_URL` at any deployed frontend (local dev server, Vercel preview, or production). The suite checks that the volunteer landing page and the admin dashboard shell both load.  
+  Point `E2E_BASE_URL` at any deployed frontend (local dev server, Vercel preview, or production). The suite checks the volunteer landing page (including opening the opportunity drawer and the load-more control) and validates the admin login scaffold.  
   You can also trigger the **Preview Smoke Tests** GitHub Action manually and supply the preview URL to run the same checks in CI. When logging env vars are configured, these runs will produce traceable entries in Logflare.
 - Frontend manual QA: volunteer signup flow and `/admin` dashboard (sign in with a Supabase admin user).
 
